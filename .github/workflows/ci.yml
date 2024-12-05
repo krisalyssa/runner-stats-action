@@ -17,6 +17,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: show resource usage on runner
+        uses: krisalyssa/runner-stats-action@main
+
       - name: Checkout
         id: checkout
         uses: actions/checkout@v4
