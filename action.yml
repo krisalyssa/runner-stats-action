@@ -1,24 +1,14 @@
-name: 'The name of your action here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: 'runner-stats-action'
+description:
+  'Report resource statistics for the active runner, before and after a workflow
+  run.'
+author: 'Kris Cottingham <krisalyssa@cottingham.net>'
 
-# Add your action's branding here. This will appear on the GitHub Marketplace.
 branding:
-  icon: 'heart'
-  color: 'red'
-
-# Define your inputs here.
-inputs:
-  milliseconds:
-    description: 'Your input description here'
-    required: true
-    default: '1000'
-
-# Define your outputs here.
-outputs:
-  time:
-    description: 'Your output description here'
+  icon: 'pie-chart' # bar-chart-2, cpu, database, hard-drive, pie-chart
+  color: 'blue'
 
 runs:
   using: node20
   main: dist/index.js
+  post: dist/index.js
