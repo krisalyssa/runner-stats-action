@@ -25663,14 +25663,69 @@ const node_child_process_1 = __nccwpck_require__(1421);
  * @returns {Promise<void>} Resolves when the action is complete.
  */
 function run() {
+    loadavg();
+    meminfo();
+    stat();
+}
+function loadavg() {
+    try {
+        (0, node_child_process_1.exec)('cat /proc/loadavg', (error, stdout, stderr) => {
+            if (error) {
+                core.error(`exec error: ${error.message}`);
+                return;
+            }
+            if (stdout.length > 0) {
+                core.info('/proc/loadavg:');
+                core.info(`${stdout}`);
+            }
+            if (stderr.length > 0) {
+                core.error('stderr:');
+                core.error(`${stderr}`);
+            }
+        });
+    }
+    catch (error) {
+        if (error instanceof Error)
+            core.setFailed(error.message);
+    }
+}
+function meminfo() {
     try {
         (0, node_child_process_1.exec)('cat /proc/meminfo', (error, stdout, stderr) => {
             if (error) {
                 core.error(`exec error: ${error.message}`);
                 return;
             }
-            core.info(`stdout: ${stdout}`);
-            core.error(`stderr: ${stderr}`);
+            if (stdout.length > 0) {
+                core.info('/proc/meminfo:');
+                core.info(`${stdout}`);
+            }
+            if (stderr.length > 0) {
+                core.error('stderr:');
+                core.error(`${stderr}`);
+            }
+        });
+    }
+    catch (error) {
+        if (error instanceof Error)
+            core.setFailed(error.message);
+    }
+}
+function stat() {
+    try {
+        (0, node_child_process_1.exec)('cat /proc/stat', (error, stdout, stderr) => {
+            if (error) {
+                core.error(`exec error: ${error.message}`);
+                return;
+            }
+            if (stdout.length > 0) {
+                core.info('/proc/stat:');
+                core.info(`${stdout}`);
+            }
+            if (stderr.length > 0) {
+                core.error('stderr:');
+                core.error(`${stderr}`);
+            }
         });
     }
     catch (error) {
