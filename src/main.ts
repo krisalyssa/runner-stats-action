@@ -2,26 +2,75 @@ import * as core from '@actions/core'
 import { exec } from 'node:child_process'
 
 /**
- * The main function for the action.
- * @returns {Promise<void>} Resolves when the action is complete.
+ * Collect and report system statistics at the start of a job.
+ *
+ * See https://www.kernel.org/doc/html/latest/filesystems/proc.html for more information about the /proc filesystem and what you can read from it.
  */
 export function run(): void {
-  loadavg()
-  meminfo()
-  stat()
+  const loadAverageReport = getReport('cat /proc/loadavg')
+  if (loadAverageReport !== undefined) {
+    core.info('Load average:')
+    core.info(loadAverageReport)
+  }
+
+  const memInfoReport = getReport('cat /proc/meminfo')
+  if (memInfoReport !== undefined) {
+    core.info('Memory:')
+    core.info(memInfoReport)
+
+    core.saveState('memInfo', parseMemInfoReport(memInfoReport))
+  }
+
+  const statReport = getReport('cat /proc/stat')
+  if (statReport !== undefined) {
+    core.info('Kernel:')
+    core.info(statReport)
+  }
 }
 
-function loadavg(): void {
+/**
+ * Collect and report system statistics at the end of a job.
+ */
+export function runOnPost(): void {
+  const loadAverageReport = getReport('cat /proc/loadavg')
+  if (loadAverageReport !== undefined) {
+    core.info('Load average:')
+    core.info(loadAverageReport)
+  }
+
+  const memInfoReport = getReport('cat /proc/meminfo')
+  if (memInfoReport !== undefined) {
+    core.info('Memory:')
+    core.info(memInfoReport)
+
+    const memInfoBefore: Map<string, number | undefined> = JSON.parse(core.getState('memInfo'))
+    const memInfoAfter: Map<string, number | undefined> = parseMemInfoReport(memInfoReport)
+
+    for (const [key, valueBefore] of memInfoBefore) {
+      const valueAfter = memInfoAfter.get(key)
+      core.info(`${valueBefore}  ${valueAfter}  ${(valueBefore !== undefined && valueAfter !== undefined) ? valueAfter - valueBefore : ''}`)
+    }
+  }
+
+  const statReport = getReport('cat /proc/stat')
+  if (statReport !== undefined) {
+    core.info('Kernel:')
+    core.info(statReport)
+  }
+}
+
+function getReport(cmd: string): string | undefined {
+  let output: string | undefined
+
   try {
-    exec('cat /proc/loadavg', (error, stdout, stderr) => {
+    exec(cmd, (error, stdout, stderr) => {
       if (error) {
         core.error(`exec error: ${error.message}`)
         return
       }
 
       if (stdout.length > 0) {
-        core.info('/proc/loadavg:')
-        core.info(`${stdout}`)
+        output = stdout
       }
 
       if (stderr.length > 0) {
@@ -32,50 +81,36 @@ function loadavg(): void {
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }
+
+  return output
 }
 
-function meminfo(): void {
-  try {
-    exec('cat /proc/meminfo', (error, stdout, stderr) => {
-      if (error) {
-        core.error(`exec error: ${error.message}`)
-        return
-      }
-
-      if (stdout.length > 0) {
-        core.info('/proc/meminfo:')
-        core.info(`${stdout}`)
-      }
-
-      if (stderr.length > 0) {
-        core.error('stderr:')
-        core.error(`${stderr}`)
-      }
-    })
-  } catch (error) {
-    if (error instanceof Error) core.setFailed(error.message)
+function parseMemInfoReport(report: string): Map<string, number | undefined> {
+  const info: Map<string, number | undefined> = new Map()
+  for (const line of report.split("\n")) {
+    const parts = line.split(/\s*:\s*/)
+    info.set(parts[0], parseValue(parts[1]))
   }
+  return info
 }
 
-function stat(): void {
-  try {
-    exec('cat /proc/stat', (error, stdout, stderr) => {
-      if (error) {
-        core.error(`exec error: ${error.message}`)
-        return
-      }
+function parseValue(valStr: string): number | undefined {
+  const m = valStr.match(/(\d+)\s*(\S+)?/)
+  if (m) {
+    let value = Number.parseInt(m[1])
+    if (m.length > 2) {
+      switch (m[2]) {
+        case 'kB':
+          value = value * 1024
+          break
 
-      if (stdout.length > 0) {
-        core.info('/proc/stat:')
-        core.info(`${stdout}`)
+        default:
+          break
       }
+    }
 
-      if (stderr.length > 0) {
-        core.error('stderr:')
-        core.error(`${stderr}`)
-      }
-    })
-  } catch (error) {
-    if (error instanceof Error) core.setFailed(error.message)
+    return value
   }
+
+  return undefined
 }
